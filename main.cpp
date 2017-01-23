@@ -14,6 +14,19 @@ struct Airport {
 double dist(const Airport&, const Airport&);
 double distanceEarth(double lat1d, double lon1d, double lat2d, double lon2d);
 
+typedef std::vector<Airport*>::iterator aiter;
+
+void merge_sort(aiter first, aiter last, const Airport& aus) {
+    if (last - first > 1) {
+        aiter middle = first + (last - first) / 2;
+        merge_sort(first, middle, aus);
+        merge_sort(middle, last, aus);
+        std::inplace_merge(first, middle, last, [aus] (Airport* left, Airport* right) {
+            return dist(aus, *left) < dist(aus, *right);
+        });
+    }
+}
+
 int main() {
     std::ifstream infile;
     int c = 0;
@@ -49,6 +62,7 @@ int main() {
         std::cerr << "Error opening file" << std::endl;
         exit(1);
     }
+    merge_sort(airportArr.begin(), airportArr.end(), *aus);
 
     std::cout << "Num airports: " << airportCount << std::endl;
 
@@ -65,7 +79,6 @@ int main() {
     for (size_t i = 0; i < within_100.size(); ++i) {
         std::cout << within_100[i]->code << ",";
     }
-    
     std::cout << std::endl;
 }
 
