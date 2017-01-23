@@ -1,105 +1,93 @@
-#include <iostream>
+#include <algorithm>
+#include <cmath>
 #include <fstream>
-#include <cmath> 
+#include <iostream>
+#include <string>
 #include <vector>
-#include "slist.h"
 
-using namespace std;
-
-class Airport
-{
-public:
-    char	code[5];
-    double	longitude;
-    double	latitude;
-    
+struct Airport {
+    char    code[5];
+    double  longitude;
+    double  latitude;
 };
 
+double dist(const Airport&, const Airport&);
 double distanceEarth(double lat1d, double lon1d, double lat2d, double lon2d);
 
-int main()
-{
-    ifstream infile;
-    int i = 0;
-    char cNum[10] ;
-    LinkedList<Airport*> airportArr;
+int main() {
+    std::ifstream infile;
+    int c = 0;
+    char cNum[10];
+    std::vector<Airport*> airportArr;
     int airportCount;
-	int c = 0;
-	
-	Airport* aus;
-    
-    infile.open ("./USAirportCodes.csv", ifstream::in);
+
+    Airport* aus;
+
+    infile.open("./USAirportCodes.csv", std::ifstream::in);
     if (infile.is_open()) {
-    	// skip first line
-    	string dummyLine;
-    	getline(infile, dummyLine);
-        while (infile.good()) {
-        	Airport* airport = new Airport();
-            airportArr.push(airport);
+        // skip first line
+        std::string dummyLine;
+        getline(infile, dummyLine);
+        for (; infile.good(); ++c) {
+            Airport* airport = new Airport();
+            airportArr.push_back(airport);
             infile.getline(airport->code, 256, ',');
-            
+
             infile.getline(cNum, 256, ',');
             airport->longitude = atof(cNum);
             infile.getline(cNum, 256, '\n');
             airport->latitude = atof(cNum);
-            
-            if (strcmp(airport->code,"AUS") == 0) {
-            	cout << "AUS found" << endl;
-            	aus = airport;
+
+            if (strcmp(airport->code, "AUS") == 0) {
+                std::cout << "AUS found" << std::endl;
+                aus = airport;
             }
-            ++i, ++c;
         }
         airportCount = c-1;
         infile.close();
+    } else {
+        std::cerr << "Error opening file" << std::endl;
+        exit(1);
     }
-    else
-    {
-        cout << "Error opening file";
-    }
-    
-    cout << "Num airports: " << airportCount << endl;
-    Airport* max = aus;
-    double max_d = 0;
-    vector<Airport*> within_100;
-    for (int i = 0; i < airportArr.size(); ++i) {
-    	Airport* current = airportArr[i];
-    	if (current != aus) {
-    		double dist = distanceEarth(aus->longitude, aus->latitude, current->longitude, current->latitude);
-    		if (dist > max_d) {
-    			max = current;
-    			max_d = dist;
-    		}
-    		if (dist <= 100) {
-    			within_100.push_back(current);
-    		}
-    	}
-    }
-    cout << "Max dist: " << max->code << " with distance " << max_d << endl;
-    cout << "Within 100km: ";
-    for (int i = 0; i < within_100.size(); ++i) {
-    	cout << within_100[i]->code << ",";
+
+    std::cout << "Num airports: " << airportCount << std::endl;
+
+    std::vector<Airport*> within_100;
+    std::copy_if(airportArr.begin(), airportArr.end(), std::back_inserter(within_100), [aus] (Airport* a) {
+        return dist(*aus, *a) <= 100;
+    });
+    auto max_iter = std::max_element(airportArr.begin(), airportArr.end(), [aus] (Airport* left, Airport* right) {
+        return dist(*aus, *left) < dist(*aus, *right);
+    });
+
+    std::cout << "Max dist: " << (*max_iter)->code << " with distance " << dist(**max_iter, *aus) << std::endl;
+    std::cout << "Within 100km: ";
+    for (size_t i = 0; i < within_100.size(); ++i) {
+        std::cout << within_100[i]->code << ",";
     }
     
+    std::cout << std::endl;
 }
-
-
 
 #define pi 3.14159265358979323846
 #define earthRadiusKm 6371.0
 
 double deg2rad(double deg) {
-  return (deg * pi / 180);
+    return (deg * pi / 180);
 }
 double rad2deg(double rad) {
-  return (rad * 180 / pi);
+    return (rad * 180 / pi);
+}
+double dist(const Airport& a, const Airport& b) {
+    return distanceEarth(a.latitude, a.longitude, b.latitude, b.longitude);
 }
 double distanceEarth(double lat1d, double lon1d, double lat2d, double lon2d) {
-  double lat1r, lon1r, lat2r, lon2r, u, v;
-  lat1r = deg2rad(lat1d);
-  lon1r = deg2rad(lon1d);
-  lat2r = deg2rad(lat2d);
-  lon2r = deg2rad(lon2d);
-  u = sin((lat2r - lat1r)/2);
-  v = sin((lon2r - lon1r)/2);
-  return 2.0 * earthRadiusKm * asin(sqrt(u * u + cos(lat1r) * cos(lat2r) * v * v));
+    double lat1r, lon1r, lat2r, lon2r, u, v;
+    lat1r = deg2rad(lat1d);
+    lon1r = deg2rad(lon1d);
+    lat2r = deg2rad(lat2d);
+    lon2r = deg2rad(lon2d);
+    u = sin((lat2r - lat1r)/2);
+    v = sin((lon2r - lon1r)/2);
+    return 2.0 * earthRadiusKm * asin(sqrt(u * u + cos(lat1r) * cos(lat2r) * v * v));
 }
